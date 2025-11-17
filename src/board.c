@@ -5,7 +5,10 @@
 #include <time.h>
 
 static int **map, **covered;
-static int h, w, gen;
+static int h, w, nb, gen, nflags, rb;
+static clock_t start;
+
+void showbomb();
 
 void freeme(void)
 {
@@ -30,6 +33,7 @@ void clearmap(void)
 		}
 	}
 }
+
 
 void printmenu(int i)
 {
@@ -63,17 +67,23 @@ void printmenu(int i)
 }
 
 
-void bomb(int n)
+void bomb(int posy, int posx)
 {
 	int i = 0;
 
 	srand(time(NULL));
+	printf("%d, %d left for clear\n", posy, posx);
 
-	while (i < n) {
+	while (i < nb) {
 		int x, y;
 		x = rand() % w;
 		y = rand() % h;
 		
+		if ((x >= posx - 1) && (x <= posx + 1) && (y >= posy - 1) && (y <= posy + 1)) {
+			printf("%d, %d left for clear\n", y, x);
+			continue;
+		}
+
 		if (map[y][x] == 9) {
 			continue;
 		}
@@ -127,8 +137,13 @@ void bomb(int n)
 			}
 		}
 		i++;
-		printf("%d, %d\n", x,y);
 	}
+}
+
+
+void start_timer()
+{
+	start = clock();
 }
 
 
@@ -138,6 +153,9 @@ int init(int y, int x, int n)
 
 	h = y;
 	w = x;
+	nb = n;
+	nflags = n;
+	rb = nb;
 	map = (int **)malloc(h * sizeof(int *));
 	covered = (int **)malloc(h * sizeof(int *));
 
@@ -177,10 +195,10 @@ int init(int y, int x, int n)
 	}
 
 	clearmap();
-	bomb(n);
 
 	return EXIT_SUCCESS;
 }
+
 
 void selected(int y, int x)
 {
@@ -190,6 +208,7 @@ void selected(int y, int x)
 		covered[y][x] += 3;
 	}
 }
+
 
 int toggle(int y, int x)
 {
@@ -248,39 +267,60 @@ int toggle(int y, int x)
 	}
 	
 	if (map[y][x] == 9) {
+		showbomb();
 		return 1;
 	}
 	
 	return 0;
 }
 
-void flag(int y, int x)
+
+void showbomb()
 {
-	if (covered[y][x] % 3 == 2) {
-		covered[y][x]--;
-	} else if (covered[y][x] % 3 == 1) {
-		covered[y][x]++;
+	int i, j;
+
+	for (i = 0; i < h; i++) {
+		for (j = 0; j < w; j++) {
+			if (map[i][j] == 9) {
+				if (covered[i][j] == 2) {
+					covered[i][j] = 10;
+				} else {
+					covered[i][j] = 0;
+				}
+			}
+		}
 	}
 }
 
 
-void printmap(int mode)
+void flag(int y, int x)
+{
+	if (covered[y][x] % 3 == 2) {
+		if (map[y][x] == 9) {
+			rb++;
+		}
+		covered[y][x]--;
+		nflags++;
+	} else if (covered[y][x] % 3 == 1) {
+		if (map[y][x] == 9) {
+			rb--;
+		}
+		covered[y][x]++;
+		nflags--;
+	}
+}
+
+
+void printmap(void)
 {
 	int i, j;
 	char *ch[8] = {"１","２","３","４","５","６","７","８"};
+	clock_t end;
 
 	printf("\033[2J");
 	printf("\033[H");
 	
-	if (mode == 1) {
-		printf("W:↑, A:←, S:↓, D:→, Q: quit, Space: toggle, R: run, N: step\n");
-	} else if (mode == 2) {
-		printf("Final state: \n");
-	} else if (mode == 3) {
-		printf("Simulating... Q: edit, Space: run, N: next generation \n");
-	} else {
-		printf("Simulating... Q: edit, Space: pause \n");
-	}
+	printf("W:↑, A:←, S:↓, D:→, Q: quit, Space: toggle, F: Flag\n");
 
 	printf("╔═");
 	for (i = 0; i < w; i++) {
@@ -295,14 +335,18 @@ void printmap(int mode)
 		for (j = 0; j < w; j++) {
 			if (covered[i][j] == 1) {		/*hidden*/
 				printf("\x1b[7m  \x1b[0m"); 
-			} else if (covered[i][j] == 2){		/*flag*/
+			} else if (covered[i][j] == 2) {		/*flag*/
 				printf("\x1b[1;47;34m()\x1b[0m");
+			} else if (covered[i][j] == 10) {
+				printf("\x1b[1;34m◢◣\x1b[0m");
 			} else if (covered[i][j] > 2) {		/*selected*/
 				
 				if (covered[i][j] == 5) {		/* flag selected */	
 					printf("\x1b[1;47;34m[]\x1b[0m");
 				} else if (covered[i][j] == 4) {	/* hidden selected*/
 					printf("\x1b[1;47m[]\x1b[0m");
+				} else if (map[i][j] == 9) {
+					printf("\x1b[1;31m◢◣\x1b[0m");
 				} else if (map[i][j] > 0) {			/* numbers shown selected */
 					printf("\x1b[1m>%d\x1b[0m", map[i][j]);
 				} else {
@@ -328,10 +372,9 @@ void printmap(int mode)
 
 	printf("═╝\n");
 
-	if (!mode) {
-		printf("Generation: %d\n", gen);
-		gen++;
-	}
+	end = clock();
+
+	printf("Number of Flags left: %d, Time: %.3ld\n", nflags, (end - start) / CLOCKS_PER_SEC);
 }
 
 /* BS&T */

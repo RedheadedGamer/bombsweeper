@@ -95,7 +95,7 @@ int start_game(int *h, int *w)
 
 int main(int argc, char *argv[])
 {
-	int h = 8, w = 8;
+	int h = 8, w = 8, first = 1;
 	int posy = 0, posx = 0;
 	char game = 1;
 	char c;
@@ -106,12 +106,12 @@ int main(int argc, char *argv[])
 	if (start_game(&h, &w) == 1) {
 		return 0;
 	}
-	
+
 	selected(posy, posx);
-	printmap(1);
+	printmap();
 
 	while (game) {
-		printmap(1);
+		printmap();
 
 		c = getch();
 		if (c == 'q') {
@@ -153,6 +153,11 @@ int main(int argc, char *argv[])
 
 			selected(posy, posx);
 		} else if (c == ' ') {
+			if (first) {
+				bomb(posy, posx);
+				start_timer();
+				first = 0;
+			}
 			if (toggle(posy, posx) == 1) {
 				game = 0;
 			};
@@ -164,7 +169,7 @@ int main(int argc, char *argv[])
 
 	
 	selected(posy, posx);
-	printmap(2);
+	printmap();
 
 	freeme();
 

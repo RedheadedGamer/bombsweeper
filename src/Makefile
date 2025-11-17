@@ -1,5 +1,5 @@
-life: life.c
-	gcc life.c board.c c_list.c -o ../build/life
+bomb: main.c
+	gcc -Wall -Wextra main.c board.c -o ../build/main
 
 clean:
 	rm -f ../build/*
