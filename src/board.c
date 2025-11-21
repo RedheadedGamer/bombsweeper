@@ -5,8 +5,9 @@
 #include <time.h>
 
 static int **map, **covered;
-static int h, w, nb, gen, nflags, rb;
-static clock_t start;
+static int h, w, nb, nflags, rb;
+static short mode;
+static time_t start = 0;
 
 void showbomb();
 
@@ -64,6 +65,7 @@ void printmenu(int i)
 	} else {
 		printf("\t Insane\n");
 	}
+	mode = i;
 }
 
 
@@ -143,7 +145,7 @@ void bomb(int posy, int posx)
 
 void start_timer()
 {
-	start = clock();
+	start = time(NULL);
 }
 
 
@@ -155,7 +157,7 @@ int init(int y, int x, int n)
 	w = x;
 	nb = n;
 	nflags = n;
-	rb = nb;
+	rb = x * y - nb;
 	map = (int **)malloc(h * sizeof(int *));
 	covered = (int **)malloc(h * sizeof(int *));
 
@@ -214,6 +216,7 @@ int toggle(int y, int x)
 {
 	if (covered[y][x] % 3 == 1) {
 		covered[y][x]--;
+		rb--;
 	}
 
 	if (map[y][x] == 0) {
@@ -268,10 +271,10 @@ int toggle(int y, int x)
 	
 	if (map[y][x] == 9) {
 		showbomb();
-		return 1;
+		return -1;
 	}
 	
-	return 0;
+	return rb;
 }
 
 
@@ -295,32 +298,32 @@ void showbomb()
 
 void flag(int y, int x)
 {
-	if (covered[y][x] % 3 == 2) {
-		if (map[y][x] == 9) {
-			rb++;
-		}
+	if (covered[y][x] % 3 == 2) {	
 		covered[y][x]--;
 		nflags++;
 	} else if (covered[y][x] % 3 == 1) {
-		if (map[y][x] == 9) {
-			rb--;
-		}
 		covered[y][x]++;
 		nflags--;
 	}
 }
 
 
-void printmap(void)
+void printmap(int m)
 {
-	int i, j;
-	char *ch[8] = {"１","２","３","４","５","６","７","８"};
-	clock_t end;
+	int i, j, k = 0;
+	const char *ch[8] = {"１","２","３","４","５","６","７","８"};
+	const char *level[] = {"Easy", "Medium", "Hard", "Insane"};
+	time_t end;
 
 	printf("\033[2J");
 	printf("\033[H");
 	
-	printf("W:↑, A:←, S:↓, D:→, Q: quit, Space: toggle, F: Flag\n");
+
+	printf("\033[1;4m%s\033[0m\n", level[mode]);
+	
+	if (!m) {
+		end = time(NULL);
+	}
 
 	printf("╔═");
 	for (i = 0; i < w; i++) {
@@ -362,7 +365,45 @@ void printmap(void)
 				}
 			}
 		}
-		printf(" ║\n");
+		printf(" ║");
+
+		switch (k){
+			case 0:
+				printf("   ┏━━━━━━━━━━━━━━┓\n");
+				k++;
+				break;
+			case 1:
+				printf("   ┃ Size: %2d*%2d  ┃\n", h, w);
+				k++;
+				break;
+			case 2:
+				printf("   ┃ Flags: %2d    ┃\n", nflags);
+				k++;
+				break;
+			case 3:
+				printf("   ┃ Bombs: %3d   ┃\n", nb);
+				k++;
+				break;
+			case 4:
+				printf("   ┃ rb: %3d      ┃\n", rb);
+				k++;
+				break;
+			case 5:
+				if (!start) {
+					printf("   ┃              ┃\n");
+				} else {
+					printf("   ┃ Time: %3ld s  ┃\n", (end - start));
+				}
+				k++;
+				break;
+			case 6:
+				printf("   ┗━━━━━━━━━━━━━━┛\n");
+				k++;
+				break;
+			default:
+				printf("\n");
+				break;
+		}
 	}
 	
 	printf("╚═");
@@ -372,9 +413,13 @@ void printmap(void)
 
 	printf("═╝\n");
 
-	end = clock();
-
-	printf("Number of Flags left: %d, Time: %.3ld\n", nflags, (end - start) / CLOCKS_PER_SEC);
+	if (!m) {
+		printf("W:↑, A:←, S:↓, D:→, Q: quit, Space: toggle, F: Flag\n");
+	} else if (m == 1) {
+		printf("GAME OVER, R: replay, Q: quit\n");
+	} else if (m == 2) {
+		printf("GAME WON, R: replay, Q: quit\n");
+	}
 }
 
 /* BS&T */

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <termios.h>
-#include <time.h>
+#include <stdio.h>
 #include "board.h"
 
 struct termios old_tio;
@@ -95,23 +95,30 @@ int start_game(int *h, int *w)
 
 int main(int argc, char *argv[])
 {
-	int h = 8, w = 8, first = 1;
-	int posy = 0, posx = 0;
-	char game = 1;
+	int h = 8, w = 8, first;
+	int posy, posx;
+	char game;
+	char wi_lo;
 	char c;
 
+start:
+	game = 1;
+	wi_lo = 0;
+	posy = 0;
+	posx = 0;
+	first = 1;
 
 	set_input_raw();
-	
+
 	if (start_game(&h, &w) == 1) {
 		return 0;
 	}
 
 	selected(posy, posx);
-	printmap();
+	printmap(0);
 
 	while (game) {
-		printmap();
+		printmap(0);
 
 		c = getch();
 		if (c == 'q') {
@@ -158,7 +165,11 @@ int main(int argc, char *argv[])
 				start_timer();
 				first = 0;
 			}
-			if (toggle(posy, posx) == 1) {
+
+			wi_lo = toggle(posy, posx); 
+
+			printf("%d\n", wi_lo);
+			if (wi_lo == 0 || wi_lo == -1) {
 				game = 0;
 			};
 		} else if (c == 'f') {
@@ -167,12 +178,23 @@ int main(int argc, char *argv[])
 
 	}
 
-	
+
 	selected(posy, posx);
-	printmap();
+	printmap(wi_lo + 2);
 
 	freeme();
-
+	
+	if (wi_lo > 0) {
+		c = 0;
+		while (c != 'q') {
+			c = getch();
+			if (c == 'r') {
+				reset_input();
+				goto start;
+			}
+		}
+	}
+	
 	reset_input();
 
 	return EXIT_SUCCESS;

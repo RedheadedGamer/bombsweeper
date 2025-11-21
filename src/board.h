@@ -2,7 +2,7 @@
 #define BOARD_H
 
 int init(int y, int x, int n);
-void printmap(void);
+void printmap(int mode);
 void start_timer(void);
 void printmenu(int i);
 void freeme(void);
